@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Jobagent · 人工标注与评估</title><link rel="stylesheet" href="/static/workspace.css"></head>
+<body class="evaluation-page">
+  <header><div class="nav"><div class="mark">J</div><span class="brand">jobagent</span><a class="nav-label" href="/">返回简历与岗位匹配 ↗</a></div></header>
+  <main>
+    <h1>让匹配结果，经得起核对。</h1>
+    <p class="muted">独立人工标注 50 组简历与岗位配对，检验技能差距识别与评分的一致性。</p>
+    <div class="metric-grid" id="progress"></div>
+    <section class="panel">
+      <div class="panel-head"><h2>评估结果</h2><a href="/evaluation/export" download>导出评估数据 ↗</a></div>
+      <div class="content" id="metrics"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>独立人工标注</h2></div>
+      <div class="content">
+        <p class="muted">这里不展示模型评分和模型缺失项。请依据原始资料独立判断，最好由未看过匹配报告的人标注。部分满足也属于技能 gap；未体现不代表候选人实际不会。</p>
+        <label for="case-selector">选择待标注配对</label><select id="case-selector"></select>
+        <div id="case-content" hidden>
+          <div class="columns"><section><h3>简历资料</h3><div class="readable" id="human-resume"></div></section><section><h3>岗位原文</h3><div class="readable" id="human-job"></div></section></div>
+          <details><summary>评分细则与标注口径</summary><p id="rubric-rule" class="muted"></p><p class="muted">逐项核对：命中1、部分命中0.5、未体现0；硬性要求权重1、加分项0.5。每个维度填写加权满足率（0–100）。JD未提及的维度取消勾选。技能缺失按单一通用技能名称填写，一行一个；二选一要求整体判断，只有全部不满足才标为缺失，如 Python/Java。</p></details>
+          <form id="annotation-form" class="annotation-form">
+            <label>标注人<input id="annotator" required autocomplete="name"></label>
+            <h3>各维度满足率</h3><div id="human-dimensions"></div>
+            <label>技能缺失项（每行一个；没有缺失则留空）<textarea id="skill-gaps" placeholder="例如：Kubernetes&#10;Redis"></textarea></label>
+            <label>标注依据与备注<textarea id="annotation-notes" placeholder="记录判断依据或存在争议的要求"></textarea></label>
+            <p class="muted" id="human-total"></p>
+            <button type="submit" class="action" id="save-annotation">保存人工标注</button>
+          </form>
+        </div>
+        <div id="annotation-status" class="status" role="status" hidden></div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/static/evaluation.js"></script>
+</body></html>

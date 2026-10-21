@@ -41,3 +41,43 @@ class JobExtraction(BaseModel):
         ):
             self.salary_min_k, self.salary_max_k = self.salary_max_k, self.salary_min_k
         return self
+
+
+class EducationExperience(BaseModel):
+    school: str | None
+    major: str | None
+    degree: str | None
+    start_date: str | None
+    end_date: str | None
+
+
+class WorkExperience(BaseModel):
+    company: str | None
+    title: str | None
+    start_date: str | None
+    end_date: str | None
+    responsibilities: list[str]
+
+
+class ProjectExperience(BaseModel):
+    name: str | None
+    role: str | None
+    technologies: list[str]
+    responsibilities: list[str]
+    achievements: list[str]
+
+
+class ResumeSkill(BaseModel):
+    name: str
+    evidence: str = Field(description="简历中支持该技能的原文片段")
+
+
+class ResumeExtraction(BaseModel):
+    """Resume fields returned by the LLM; missing facts are null or empty lists."""
+
+    name: str | None
+    target_role: str | None
+    education: list[EducationExperience]
+    work_experience: list[WorkExperience]
+    projects: list[ProjectExperience]
+    skills: list[ResumeSkill]

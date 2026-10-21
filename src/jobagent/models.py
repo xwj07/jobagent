@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -57,3 +57,28 @@ class JobSkill(Base):
 
     posting: Mapped[JobPosting] = relationship(back_populates="skills")
     skill: Mapped[Skill] = relationship(back_populates="postings", lazy="joined")
+
+
+class InterviewSession(Base):
+    __tablename__ = "interview_sessions"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    state: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+
+class MatchCase(Base):
+    """Frozen input pair, current prediction and separately authored human label."""
+
+    __tablename__ = "match_cases"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    resume_data: Mapped[dict] = mapped_column(JSON)
+    job_data: Mapped[dict] = mapped_column(JSON)
+    prediction: Mapped[dict] = mapped_column(JSON)
+    annotation: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )

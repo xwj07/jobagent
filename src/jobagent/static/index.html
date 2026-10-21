@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jobagent · 简历解析</title>
+  <link rel="stylesheet" href="/static/workspace.css?v=resume-edit-v1">
+  <style>
+    :root { color-scheme: light; --ink:#182e2a; --muted:#71807a; --green:#176d54; --line:#e1e7e1; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#f5f6f2; color:var(--ink); font-family:Inter,"Microsoft YaHei",system-ui,sans-serif; font-size:15px; line-height:1.7; }
+    button,input { font:inherit; }
+    header { border-bottom:1px solid var(--line); background:#fcfdfb; }
+    .nav { max-width:1120px; margin:auto; padding:21px 32px; display:flex; align-items:center; gap:12px; }
+    .mark { background:var(--green); color:white; border-radius:10px; width:33px; height:33px; display:grid; place-items:center; font-weight:700; }
+    .brand { font-size:19px; font-weight:700; letter-spacing:-.6px; }
+    .nav-label { margin-left:auto; color:var(--muted); font-size:13px; }
+    main { max-width:1120px; margin:0 auto; padding:50px 32px 70px; }
+    .eyebrow { color:var(--green); font-size:12px; letter-spacing:2px; font-weight:700; }
+    h1 { font-size:34px; letter-spacing:-1px; line-height:1.3; margin:10px 0 12px; font-weight:650; }
+    .intro { margin:0 0 35px; color:var(--muted); }
+    .workspace { display:grid; grid-template-columns:340px minmax(0,1fr); gap:24px; align-items:start; }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+    .panel-head { display:flex; align-items:center; gap:11px; padding:22px 24px; border-bottom:1px solid #edf0ec; }
+    .step { font-size:11px; font-weight:700; color:var(--green); background:#edf5ee; border-radius:6px; padding:3px 7px; }
+    h2 { margin:0; font-size:16px; font-weight:600; }
+    .upload-body { padding:24px; }
+    .dropzone { position:relative; border:1.5px dashed #b9cfc1; border-radius:13px; background:#f8fbf7; min-height:200px; padding:28px 15px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; cursor:pointer; transition:.2s; }
+    .dropzone:hover,.dropzone.dragging { background:#edf6ef; border-color:var(--green); }
+    .dropzone:focus-within { outline:2px solid var(--green); outline-offset:4px; }
+    .dropzone svg { width:33px; height:33px; margin-bottom:14px; color:var(--green); }
+    .dropzone strong { font-size:14px; font-weight:600; }
+    .dropzone span { font-size:12px; color:var(--muted); margin-top:5px; }
+    input[type=file] { position:absolute; width:1px; height:1px; opacity:0; }
+    .file-info { margin:15px 0 0; font-size:13px; overflow-wrap:anywhere; color:var(--green); }
+    .hint { color:var(--muted); font-size:12px; margin:16px 0 22px; }
+    .submit { border:0; border-radius:10px; background:var(--green); color:white; width:100%; padding:12px 18px; cursor:pointer; font-weight:600; transition:.2s; }
+    .submit:hover:not(:disabled) { background:#10523f; }
+    .submit:disabled { opacity:.45; cursor:default; }
+    .status { padding:13px 15px; margin:16px 0 0; border-radius:9px; background:#eff5ef; color:var(--green); font-size:13px; overflow-wrap:anywhere; }
+    .status.error { background:#fff1ed; color:#a13a25; border:1px solid #f3d8ce; }
+    .status.loading::before { content:""; display:inline-block; width:11px; height:11px; border:2px solid #a5c8b8; border-top-color:var(--green); border-radius:50%; animation:spin .8s linear infinite; margin-right:8px; vertical-align:-1px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .result-panel { min-height:435px; }
+    .badge { margin-left:auto; font-size:11px; color:var(--muted); }
+    .empty { padding:75px 25px; text-align:center; color:var(--muted); }
+    .empty-icon { font-size:28px; color:#b2c5b7; margin-bottom:13px; }
+    .empty strong { display:block; color:#5c7168; font-size:15px; font-weight:500; }
+    .empty p { font-size:12px; margin-top:6px; }
+    #result { padding:0 26px 26px; }
+    .profile { padding:25px 0 22px; border-bottom:1px solid var(--line); }
+    .profile h3 { font-size:25px; margin:0 0 3px; font-weight:600; }
+    .profile p { color:var(--green); margin:0; font-size:14px; }
+    .section { margin-top:25px; }
+    .section h3 { font-size:14px; margin:0 0 13px; display:flex; align-items:center; gap:9px; }
+    .section h3::before { content:""; height:13px; width:3px; background:#5a9674; border-radius:2px; }
+    .entry { background:#f8faf7; padding:15px 17px; border-radius:10px; margin-top:10px; overflow-wrap:anywhere; }
+    .entry h4 { margin:0 0 4px; font-size:14px; font-weight:600; }
+    .meta { color:var(--muted); font-size:12px; }
+    ul { padding-left:19px; margin:9px 0 0; font-size:13px; }
+    li+li { margin-top:5px; }
+    .tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+    .tag { background:#eaf2eb; color:#397253; border-radius:5px; padding:2px 8px; font-size:11px; }
+    .skill { display:grid; grid-template-columns:100px 1fr; gap:12px; font-size:13px; border-bottom:1px solid #edf0ec; padding:11px 0; overflow-wrap:anywhere; }
+    .skill strong { color:var(--green); font-weight:600; }
+    .skill span { color:#62716b; }
+    .none { color:var(--muted); font-size:13px; margin:0; }
+    footer { color:#8b958e; font-size:11px; margin-top:25px; }
+    [hidden] { display:none !important; }
+    @media(max-width:760px) { main { padding:30px 18px; } .nav { padding:17px 20px; } h1 { font-size:28px; } .workspace { grid-template-columns:1fr; } .result-panel { min-height:300px; } .empty { padding:50px 20px; } }
+  </style>
+</head>
+<body>
+  <header><div class="nav"><div class="mark" aria-hidden="true">J</div><span class="brand">jobagent</span><a class="nav-label" href="/evaluation">人工标注与评估 ↗</a></div></header>
+  <main>
+    <div class="eyebrow">RESUME WORKSPACE</div>
+    <h1>从一份简历开始。</h1>
+    <p class="intro">整理简历，选择目标岗位，查看匹配分析，练习会追问的模拟面试。</p>
+    <div class="workspace">
+      <section class="panel">
+        <div class="panel-head"><span class="step">01</span><h2>上传简历</h2></div>
+        <form class="upload-body" id="upload-form">
+          <label class="dropzone" id="dropzone" for="resume-file">
+            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 4h10l6 6v18H7V4h2Z"/><path d="M19 4v7h6M16 23V14m-4 4 4-4 4 4"/></svg>
+            <strong>点击选择，或将简历拖到这里</strong>
+            <span>PDF 格式</span>
+            <input id="resume-file" name="file" type="file" accept=".pdf,application/pdf" required>
+          </label>
+          <p class="file-info" id="file-info" hidden></p>
+          <p class="hint">请使用可选中文字的 PDF 简历，扫描图片暂不支持。简历文本将发送至模型服务用于解析。</p>
+          <button class="submit" id="submit" type="submit" disabled>开始解析 <span aria-hidden="true">↗</span></button>
+          <div class="status" id="status" role="status" aria-live="polite" hidden></div>
+        </form>
+      </section>
+      <section class="panel result-panel" aria-label="解析结果">
+        <div class="panel-head"><span class="step">02</span><h2>解析结果</h2><span class="badge" id="result-badge">等待上传</span><button type="button" class="action secondary" id="edit-resume" hidden>编辑 / 补充</button></div>
+        <div class="empty" id="empty"><div class="empty-icon" aria-hidden="true">▤</div><strong>你的经历，即将在这里展开</strong><p>解析完成后，以清晰的卡片展示简历内容。</p></div>
+        <div id="result" hidden></div>
+        <form id="resume-editor" hidden>
+          <p class="job-meta">可修改解析结果，添加或删除经历与技能。列表内容每行一项。保存后用于新的匹配分析与面试；修改仅在当前页面保留。</p>
+          <div id="resume-editor-fields"></div>
+          <div class="job-actions">
+            <button class="action" type="submit">保存简历修改</button>
+            <button class="action secondary" id="cancel-resume-edit" type="button">取消修改</button>
+          </div>
+        </form>
+        <p id="resume-edit-status" class="job-meta" role="status" aria-live="polite" hidden></p>
+      </section>
+    </div>
+    <section class="panel workflow">
+      <div class="panel-head"><span class="step">03</span><h2>获取或上传招聘信息</h2></div>
+      <div class="job-input-tabs" role="tablist" aria-label="招聘信息来源">
+        <button type="button" role="tab" aria-selected="true" aria-controls="online-jobs" id="online-tab">在线获取</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="manual-jobs" id="manual-tab">自行提供</button>
+      </div>
+      <div id="online-jobs" role="tabpanel" aria-labelledby="online-tab">
+      <form id="job-search" class="search-form">
+        <label>目标职位<select id="job-role" required aria-label="目标职位"></select></label>
+        <label>工作城市<select id="job-city" required aria-label="工作城市"></select></label>
+        <label>招聘平台<select id="job-source" aria-label="招聘平台"><option value="both">BOSS 直聘 + 智联招聘</option><option value="zhilian">智联招聘</option><option value="boss">BOSS 直聘</option></select></label>
+        <button type="submit" class="action" id="collect-button">获取岗位 ↗</button>
+      </form>
+      <p class="workflow-note">每个平台读取首批最多 5 个完整 JD。请先完成简历解析，再选择岗位生成匹配报告。</p>
+      <div id="collection-status" class="workflow-content" aria-live="polite"></div>
+      </div>
+      <div id="manual-jobs" role="tabpanel" aria-labelledby="manual-tab" hidden>
+        <form id="job-upload-form" class="manual-job-form">
+          <label>职位名称（可选）<input name="title" id="manual-job-title" placeholder="例如：AI 应用工程师"></label>
+          <fieldset class="job-format"><legend>提供方式</legend>
+            <label><input type="radio" name="job-format" value="file" checked> 上传文件</label>
+            <label><input type="radio" name="job-format" value="text"> 粘贴文字</label>
+          </fieldset>
+          <label id="job-file-area">招聘信息文件<input type="file" id="job-upload-file" name="file" accept=".pdf,.txt,application/pdf,text/plain" required><span class="job-meta">支持文字版 PDF、TXT（UTF-8）。</span></label>
+          <label id="job-text-area" hidden>招聘信息正文<textarea id="job-upload-text" name="text" rows="8" placeholder="粘贴岗位职责、任职要求等完整招聘信息" disabled></textarea></label>
+          <p class="job-meta">添加后与已解析的简历进行匹配，使用相同的评分细则、原文证据和补足建议。</p>
+          <button type="submit" class="action" id="add-job-button">添加招聘信息 ↗</button>
+          <div id="job-upload-status" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+      <div id="job-list" class="job-grid workflow-content"></div>
+    </section>
+    <section class="panel workflow" id="match-panel">
+      <div class="panel-head"><span class="step">04</span><h2>岗位匹配报告</h2></div>
+      <div class="workflow-content" id="match-report"><p class="none">选择一个岗位，查看要求命中、技能差距与补足建议。</p></div>
+    </section>
+    <section class="panel workflow" id="interview-panel">
+      <div class="panel-head"><span class="step">05</span><h2>模拟面试</h2></div>
+      <div class="workflow-content">
+        <p class="workflow-note">三个主题，每个主题最多追问一次。根据回答调整难度，结束后查看评分与练习建议。</p>
+        <div id="interview-status" role="status" aria-live="polite">解析简历后，点击岗位卡片上的“开始模拟面试”。</div>
+        <div id="interview-plan" class="interview-plan"></div>
+        <div id="interview-turns"></div>
+        <form id="interview-answer-form" hidden>
+          <fieldset class="answer-modes"><legend>选择作答方式</legend>
+            <label><input type="radio" name="answer-mode" value="voice" checked> 语音作答 <span class="recommended">推荐</span></label>
+            <label><input type="radio" name="answer-mode" value="text"> 手写输入</label>
+          </fieldset>
+          <div id="voice-answer-panel">
+            <p class="job-meta">建议使用语音练习真实面试中的口头表达。录音将直接发送至 Gitee 音频大模型理解和评估。</p>
+            <div class="voice-controls">
+              <button type="button" class="action" id="start-recording">开始录音</button>
+              <button type="button" class="action secondary" id="stop-recording" disabled>停止录音</button>
+            </div>
+            <p id="voice-status" role="status" aria-live="polite">点击开始录音后，请允许浏览器使用麦克风。</p>
+            <audio id="voice-preview" controls hidden aria-label="试听本次回答"></audio>
+            <p class="job-meta">停止后可试听或重新录制，确认后点击提交。模型理解的文字会显示在对话记录中。</p>
+          </div>
+          <div id="text-answer-panel" hidden>
+            <label for="interview-answer">你的回答</label>
+            <textarea id="interview-answer" rows="6" placeholder="说明你的思路、具体做法和理由；不知道时也可以直接说明。"></textarea>
+          </div>
+          <div class="job-actions">
+            <button class="action" type="submit" id="submit-interview-answer">提交语音回答 ↗</button>
+            <button class="action secondary" id="finish-interview" type="button">结束面试并评分</button>
+          </div>
+          <p class="job-meta">结束时仅评估已提交的回答，未回答主题计 0 分。记录会自动保存，刷新可继续。</p>
+        </form>
+        <div id="interview-report"></div>
+      </div>
+    </section>
+    <footer>JOBAGENT · 让每一段经历清晰可见</footer>
+  </main>
+  <script>
+    const form = document.querySelector('#upload-form');
+    const input = document.querySelector('#resume-file');
+    const button = document.querySelector('#submit');
+    const status = document.querySelector('#status');
+    const result = document.querySelector('#result');
+    const badge = document.querySelector('#result-badge');
+    const empty = document.querySelector('#empty');
+    const dropzone = document.querySelector('#dropzone');
+    let selectedFile = null;
+    function node(tag, text, className) {
+      const item = document.createElement(tag);
+      if (text !== undefined) item.textContent = text;
+      if (className) item.className = className;
+      return item;
+    }
+    function showStatus(message, kind = '') {
+      status.textContent = message;
+      status.className = `status ${kind}`;
+      status.hidden = false;
+    }
+    function selectFile(file) {
+      window.dispatchEvent(new Event('resume-cleared'));
+      selectedFile = file;
+      const info = document.querySelector('#file-info');
+      info.textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(0)} KB` : '';
+      info.hidden = !file;
+      button.disabled = !file;
+      status.hidden = true;
+      result.replaceChildren();
+      result.hidden = true;
+      empty.hidden = false;
+      badge.textContent = '等待解析';
+    }
+    input.addEventListener('change', () => selectFile(input.files[0]));
+    dropzone.addEventListener('dragover', event => { event.preventDefault(); dropzone.classList.add('dragging'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragging'));
+    dropzone.addEventListener('drop', event => {
+      event.preventDefault();
+      dropzone.classList.remove('dragging');
+      input.files = event.dataTransfer.files;
+      selectFile(input.files[0]);
+    });
+    function section(title, entries, render) {
+      const box = node('section', undefined, 'section');
+      box.append(node('h3', title));
+      if (!entries.length) box.append(node('p', '简历中未提供', 'none'));
+      entries.forEach(entry => box.append(render(entry)));
+      result.append(box);
+    }
+    function entry(title, meta, lines = [], technologies = []) {
+      const box = node('article', undefined, 'entry');
+      box.append(node('h4', title || '未注明名称'));
+      if (meta) box.append(node('div', meta, 'meta'));
+      if (technologies.length) {
+        const tags = node('div', undefined, 'tags');
+        technologies.forEach(name => tags.append(node('span', name, 'tag')));
+        box.append(tags);
+      }
+      if (lines.length) {
+        const list = node('ul');
+        lines.forEach(line => list.append(node('li', line)));
+        box.append(list);
+      }
+      return box;
+    }
+    function renderResume(data) {
+      result.replaceChildren();
+      const profile = node('div', undefined, 'profile');
+      profile.append(node('h3', data.name || '未注明姓名'), node('p', data.target_role || '未注明求职意向'));
+      result.append(profile);
+      section('教育经历', data.education, item => entry(item.school,
+        [item.major, item.degree, [item.start_date, item.end_date].filter(Boolean).join(' — ')].filter(Boolean).join(' · ')));
+      section('工作经历', data.work_experience, item => entry(item.company,
+        [item.title, [item.start_date, item.end_date].filter(Boolean).join(' — ')].filter(Boolean).join(' · '), item.responsibilities));
+      section('项目经历', data.projects, item => entry(item.name, item.role,
+        [...item.responsibilities, ...item.achievements.map(text => `项目成果：${text}`)], item.technologies));
+      section('专业技能', data.skills, item => {
+        const row = node('div', undefined, 'skill');
+        row.append(node('strong', item.name), node('span', item.evidence));
+        return row;
+      });
+      empty.hidden = true;
+      result.hidden = false;
+    }
+    window.addEventListener('resume-edited', event => {
+      renderResume(event.detail);
+      badge.textContent = '已保存修改';
+    });
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      window.dispatchEvent(new Event('resume-cleared'));
+      result.hidden = true;
+      empty.hidden = false;
+      button.disabled = true;
+      input.disabled = true;
+      dropzone.style.pointerEvents = 'none';
+      button.textContent = '正在解析…';
+      badge.textContent = '解析中';
+      showStatus('正在读取简历并整理内容，请稍候…', 'loading');
+      const body = new FormData();
+      body.append('file', selectedFile);
+      try {
+        const response = await fetch('/resumes/parse', { method:'POST', body });
+        const data = await response.json();
+        if (!response.ok) {
+          const reason = Array.isArray(data.detail) ? data.detail.map(item => item.msg).join('；') : data.detail;
+          throw new Error(reason || `解析失败（${response.status}）`);
+        }
+        renderResume(data);
+        window.dispatchEvent(new CustomEvent('resume-parsed', { detail:data }));
+        badge.textContent = '已完成';
+        showStatus('解析完成。你可以更换文件，继续解析。');
+      } catch (error) {
+        badge.textContent = '未完成';
+        showStatus(error instanceof TypeError ? '无法连接解析服务，请确认后端已启动后重新尝试。' : error.message, 'error');
+      } finally {
+        button.disabled = false;
+        input.disabled = false;
+        dropzone.style.pointerEvents = '';
+        button.textContent = '重新解析 ↗';
+      }
+    });
+  </script>
+  <script type="module" src="/static/workspace.js?v=resume-edit-v1"></script>
+</body>
+</html>
