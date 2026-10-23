@@ -1,0 +1,106 @@
+body.module-workspace {
+  --ink:#263c38; --muted:#778580; --green:#32836c; --line:#e7ede9;
+  background:#fff; height:100dvh; overflow:hidden;
+}
+.module-workspace > header { height:65px; background:#fff; }
+.module-workspace .nav { max-width:none; padding:15px 36px; height:65px; }
+.module-workspace .mark { background:#e8f4ed; color:#32836c; }
+.module-workspace main {
+  position:absolute; inset:65px 0 0 202px; max-width:none; margin:0; padding:0;
+  overflow-y:auto; overscroll-behavior-y:contain; scrollbar-width:thin; scrollbar-color:#d7e2da transparent;
+}
+.module-stage {
+  min-height:100%; position:relative; display:flex; flex-direction:column;
+  padding:24px clamp(24px,4vw,72px) 24px;
+}
+.module-heading { flex:none; padding:16px 0 22px; }
+.module-heading h1:focus { outline:none; }
+.module-kicker { color:#729787; font-size:10px; font-weight:650; letter-spacing:2px; }
+.module-heading h1 { margin:7px 0 3px; font-size:29px; letter-spacing:-.7px; font-weight:600; }
+.module-heading p { margin:0; color:var(--muted); font-size:13px; }
+.module-body { flex:1; min-width:0; overflow:visible; }
+.module-workspace .panel { border-radius:16px; border-color:#e5ece6; box-shadow:0 4px 24px #294a3805; }
+.module-workspace .panel-head { padding:18px 22px; background:#fdfefd; }
+.module-workspace .panel-head h2 { font-size:14px; }
+.module-workspace .step { background:#eff6ee; color:#638a68; }
+.module-workspace .workspace { grid-template-columns:minmax(240px,.8fr) minmax(0,1.5fr); height:auto; gap:22px; align-items:start; }
+.module-workspace .workspace > .panel:first-child { position:sticky; top:24px; align-self:start; }
+.module-workspace .result-panel { min-height:435px; height:auto; }
+.module-workspace .result-panel > .panel-head { flex:none; flex-wrap:wrap; gap:9px; }
+.module-workspace .jd-text { max-height:none; overflow:visible; }
+.module-workspace .empty { padding:60px 20px; }
+.module-workspace .dropzone { background:#fafdf9; border-color:#c5dccb; min-height:170px; }
+.module-workspace .submit,.module-workspace .action:not(.secondary) { background:#32836c; }
+.module-workspace .submit:hover:not(:disabled),.module-workspace .action:not(.secondary):hover:not(:disabled) { background:#256d59; }
+.module-workspace .entry { background:#f8fbf8; }
+.module-workspace .dimension { background:#f0f7ef; }
+.module-workspace .workflow { margin-top:0; }
+.module-workspace .status:not(.error) { background:#eff7ef; }
+.module-workspace .advice { background:#fff9eb; }
+.module-edge {
+  align-self:center; flex:none; border:0; background:#fff;
+  color:#82948a; padding:6px 18px; border-radius:20px; font:inherit; font-size:11px;
+  white-space:nowrap; cursor:pointer; transition:color .2s,background .2s;
+}
+.module-edge.previous { margin-bottom:6px; }
+.module-edge.next { margin-top:24px; }
+.module-edge:hover { color:#32836c; background:#f1f7f2; }
+.module-minimap {
+  position:fixed; top:65px; bottom:0; left:0; width:202px; padding:46px 18px;
+  border-right:1px solid #edf1ed; background:#fafcf9; display:flex; flex-direction:column; gap:13px;
+}
+.minimap-caption { font-size:11px; color:#98a49a; margin:0 12px 14px; letter-spacing:.7px; }
+.minimap-item {
+  position:relative; width:100%; padding:14px 13px 12px; background:transparent; border:1px solid transparent;
+  border-radius:12px; text-align:left; color:#849087; font:inherit; cursor:pointer;
+}
+.minimap-item:hover { background:#f0f5ef; }
+.minimap-item.active { background:#fff; border-color:#dce9df; color:#32836c; box-shadow:0 3px 14px #355f3a06; }
+.minimap-item.active::before { content:''; position:absolute; left:-19px; top:17px; bottom:17px; width:3px; background:#7eaf92; border-radius:0 3px 3px 0; }
+.minimap-preview { width:100%; height:39px; display:grid; grid-template-columns:32% 1fr; gap:4px; margin-bottom:10px; opacity:.6; }
+.minimap-preview i { display:block; background:#dfe8de; border-radius:3px; }
+.minimap-preview i:first-child { grid-row:span 3; }
+.minimap-preview i:last-child { width:72%; }
+.preview-1 { grid-template-columns:1fr 1fr; }
+.preview-1 i:first-child { grid-row:auto; }
+.preview-1 i:last-child { width:100%; }
+.preview-2,.preview-3 { grid-template-columns:1fr; gap:5px; }
+.preview-2 i:first-child,.preview-3 i:first-child { grid-row:auto; width:40%; background:#c9dcbf; }
+.preview-2 i:nth-child(3),.preview-3 i:nth-child(3) { width:85%; }
+.minimap-item.active .minimap-preview { opacity:1; }
+.minimap-number { font-size:10px; margin-right:8px; opacity:.7; }
+.minimap-label { font-size:12px; }
+@media(min-width:1500px) { .module-stage { padding-left:max(60px,calc((100vw - 1360px)/2)); padding-right:max(60px,calc((100vw - 1360px)/2)); } }
+@media(max-width:1000px) {
+  .module-minimap { width:148px; padding:42px 12px; }
+  .module-workspace main { left:148px; }
+  .minimap-caption { margin-left:4px; font-size:10px; }
+  .module-stage { padding-left:22px; padding-right:22px; }
+  .module-workspace .workspace { gap:14px; grid-template-columns:minmax(205px,.8fr) minmax(0,1fr); }
+  .module-workspace .upload-body { padding:16px; }
+}
+@media(max-width:700px) {
+  .module-workspace .nav { padding:14px 18px; }
+  .module-workspace .nav-label { font-size:11px; }
+  .module-minimap { width:58px; padding:35px 6px; gap:14px; }
+  .minimap-caption,.minimap-preview,.minimap-label { display:none; }
+  .minimap-item { padding:13px 0; text-align:center; }
+  .minimap-number { margin:0; font-size:12px; }
+  .minimap-item.active::before { left:-7px; }
+  .module-workspace main { left:58px; }
+  .module-stage { padding:20px 14px; }
+  .module-heading { padding-bottom:16px; }
+  .module-heading h1 { font-size:24px; }
+  .module-heading p { font-size:11px; }
+  .module-kicker { font-size:9px; letter-spacing:1px; }
+  .module-workspace .workspace { display:flex; flex-direction:column; height:auto; }
+  .module-workspace .workspace > .panel:first-child { width:100%; position:static; }
+  .module-workspace .result-panel { width:100%; height:auto; min-height:300px; }
+  .module-workspace .dropzone { min-height:125px; padding:18px 10px; }
+  .module-workspace .panel-head { padding:14px; }
+  .module-workspace .search-form,.module-workspace .manual-job-form { padding:16px; }
+  .module-workspace .search-form .catalog-select { min-width:100%; }
+  .module-workspace .workflow-content { padding-left:14px; padding-right:14px; }
+  .module-workspace .job-grid { grid-template-columns:1fr; }
+}
+@media(prefers-reduced-motion:reduce) { .module-workspace * { scroll-behavior:auto !important; transition:none !important; } }

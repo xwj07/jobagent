@@ -1,6 +1,9 @@
 :root { --ink:#182e2a; --muted:#71807a; --green:#176d54; --line:#e1e7e1; }
 .workflow { margin-top:24px; }
 .workflow-content { padding:0 24px 24px; }
+.report-interview-actions { display:flex; justify-content:flex-end; }
+#match-panel > .panel-head { flex-wrap:wrap; }
+.report-interview-top { margin-left:auto; }
 .job-input-tabs { display:flex; gap:8px; padding:20px 24px 0; }
 .job-input-tabs button { padding:8px 18px; border:1px solid var(--line); background:white; color:var(--muted); border-radius:8px; cursor:pointer; font:inherit; font-size:13px; }
 .job-input-tabs button[aria-selected=true] { background:#edf5ee; color:var(--green); border-color:#b8cfbf; }
@@ -15,6 +18,10 @@
 .workflow-note { color:var(--muted); font-size:12px; padding:0 24px; }
 .search-form { display:flex; align-items:end; gap:16px; padding:24px; flex-wrap:wrap; }
 .search-form label { display:grid; gap:7px; font-size:12px; color:var(--muted); flex:1; min-width:150px; }
+.search-form .catalog-select { flex:2; min-width:240px; }
+.catalog-select input { width:100%; border:1px solid #ccd7ce; border-radius:8px; padding:9px 11px; font:inherit; color:var(--ink); background:#f8faf7; }
+.catalog-count { font-size:11px; color:var(--muted); min-height:19px; }
+.catalog-select select { font-size:14px; }
 select,.annotation-form input,.annotation-form textarea { color:var(--ink); background:white; border:1px solid #ccd7ce; border-radius:8px; padding:10px 12px; font:inherit; width:100%; }
 select:focus,input:focus,textarea:focus { outline:2px solid #a9c9b6; outline-offset:1px; }
 .action { padding:11px 20px; background:var(--green); color:white; border:0; border-radius:8px; font:inherit; font-size:13px; cursor:pointer; }
@@ -26,6 +33,8 @@ select:focus,input:focus,textarea:focus { outline:2px solid #a9c9b6; outline-off
 .job-card h3 { font-size:16px; margin:0 0 7px; }
 .job-meta { font-size:12px; color:var(--muted); }
 .salary { color:var(--green); font-weight:600; font-size:14px; margin:8px 0; }
+.skill-rank { background:#edf5ee; color:var(--green); border-radius:7px; padding:8px 10px; font-size:13px; font-weight:600; margin:10px 0; }
+.matched-keywords { font-size:12px; color:var(--green); overflow-wrap:anywhere; }
 .job-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:15px; flex-wrap:wrap; }
 .interview-plan { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:20px 0; }
 .interview-plan strong { font-size:14px; }

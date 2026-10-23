@@ -2,14 +2,13 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .job_catalog import CITIES, ROLES
 from .schemas import ResumeExtraction
 
-Source = Literal["boss", "zhilian", "manual"]
+Source = Literal["liepin", "zhilian", "nowcoder", "manual"]
 Category = Literal["skills", "projects", "experience", "education"]
-Role = Literal["python", "ai_application", "java", "frontend", "data", "ml"]
-City = Literal["hangzhou", "beijing", "shanghai", "shenzhen", "guangzhou", "chengdu"]
 
 
 class JobCandidate(BaseModel):
@@ -20,19 +19,41 @@ class JobCandidate(BaseModel):
     source: Source
     url: str | None
     raw_text: str = Field(min_length=10)
+    education: str = ""
+    experience: str = ""
+    published_at: str = ""
+    description: str = ""
+    recruitment_type: str = ""
 
 
 class CollectionRequest(BaseModel):
-    role: Role
-    city: City
-    source: Literal["boss", "zhilian", "both"] = "both"
+    role: str
+    city: str
+    source: Literal["liepin", "zhilian", "nowcoder", "both"] = "both"
+    limit: Literal[20, 50, 100] = 50
+    recruitment_type: Literal["all", "campus", "intern", "social"] = "all"
+
+    @field_validator("role")
+    @classmethod
+    def selected_role(cls, value: str) -> str:
+        if value not in ROLES:
+            raise ValueError("请选择职位目录中的目标职位")
+        return value
+
+    @field_validator("city")
+    @classmethod
+    def selected_city(cls, value: str) -> str:
+        if value not in CITIES:
+            raise ValueError("请选择城市目录中的工作城市")
+        return value
 
 
 class SourceResult(BaseModel):
     source: Source
-    status: Literal["success", "blocked", "error"]
+    status: Literal["success", "partial", "blocked", "error"]
     count: int
     message: str
+    search_urls: dict[str, str]
 
 
 class CollectionResult(BaseModel):
@@ -43,6 +64,18 @@ class CollectionResult(BaseModel):
 class MatchRequest(BaseModel):
     resume: ResumeExtraction
     job: JobCandidate
+
+
+class RankRequest(BaseModel):
+    resume: ResumeExtraction
+    jobs: list[JobCandidate]
+
+
+class RankedJob(BaseModel):
+    job: JobCandidate
+    score: float | None
+    matched_skills: list[str]
+    missing_skills: list[str]
 
 
 class RequirementFields(BaseModel):
@@ -113,11 +146,17 @@ class HumanDimension(BaseModel):
     score: float = Field(ge=0, le=100)
 
 
+MAX_SKILL_GAPS = 30
+MAX_SKILL_GAP_CHARS = 60
+MAX_NOTES_CHARS = 2000
+
+
 class HumanAnnotation(BaseModel):
-    annotator: str = Field(min_length=1)
+    # Bounded so a single annotation cannot bloat the database row or the evaluation page.
+    annotator: str = Field(min_length=1, max_length=50)
     dimensions: list[HumanDimension] = Field(min_length=1)
-    skill_gaps: list[str]
-    notes: str = ""
+    skill_gaps: list[str] = Field(max_length=MAX_SKILL_GAPS)
+    notes: str = Field(default="", max_length=MAX_NOTES_CHARS)
 
     @model_validator(mode="after")
     def distinct_dimensions(self) -> "HumanAnnotation":
@@ -126,4 +165,6 @@ class HumanAnnotation(BaseModel):
             raise ValueError("同一评分维度不能重复")
         if any(not name.strip() for name in self.skill_gaps):
             raise ValueError("技能名称不能为空")
+        if any(len(name) > MAX_SKILL_GAP_CHARS for name in self.skill_gaps):
+            raise ValueError(f"单个技能名称不能超过 {MAX_SKILL_GAP_CHARS} 个字符")
         return self

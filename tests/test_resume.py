@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from openai import APIConnectionError, APIStatusError
+from openai import APIConnectionError, APIStatusError, APITimeoutError
 from pydantic import ValidationError
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
@@ -109,6 +109,7 @@ def test_llm_parses_resume_and_separates_source_from_instructions(provider, resu
     request = provider.client.chat.completions.create.call_args.kwargs
     assert request["model"] == "test-model"
     assert request["response_format"] == {"type": "json_object"}
+    assert request["extra_body"] == {"thinking": {"type": "disabled"}}
     assert source not in request["messages"][0]["content"]
     assert json.loads(request["messages"][1]["content"]) == {"resume_text": source}
     assert "JSON Schema" in request["messages"][0]["content"]
@@ -174,8 +175,23 @@ def test_resume_provider_reads_latest_configuration(monkeypatch):
     second = get_resume_provider()
     assert first.client.api_key == "first-test-key"
     assert second.client.api_key == "second-test-key"
+    assert first.client.timeout == 180
+    assert first.client.max_retries == 0
     first.client.close()
     second.client.close()
+
+
+def test_resume_timeout_returns_reason_without_silently_retrying(api_client, provider):
+    provider.client.chat.completions.create.side_effect = APITimeoutError(
+        request=httpx.Request("POST", "https://example.com/chat/completions")
+    )
+    response = api_client.post(
+        "/resumes/parse",
+        files={"file": ("resume.pdf", make_pdf("Demo candidate"), "application/pdf")},
+    )
+    assert response.status_code == 502
+    assert "模型响应超时" in response.json()["detail"]
+    assert provider.client.chat.completions.create.call_count == 1
 
 
 def test_model_error_preserves_reason_and_hides_key(api_client, provider):

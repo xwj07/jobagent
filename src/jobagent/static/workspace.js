@@ -1,5 +1,6 @@
-import { startInterview, interviewOccupied } from './interview.js?v=voice-v1';
+import { startInterview, interviewOccupied } from './interview.js?v=modules-v2';
 import './resume-editor.js';
+import { mountJobSelectors } from './job-selectors.js';
 
 const el = (tag, text, className) => {
   const element = document.createElement(tag);
@@ -15,7 +16,7 @@ const api = async (url, body) => {
   if (!response.ok) throw new Error(Array.isArray(data.detail) ? data.detail.map(item => item.msg).join('；') : data.detail);
   return data;
 };
-const sourceNames = { boss:'BOSS 直聘', zhilian:'智联招聘', manual:'用户提供' };
+const sourceNames = { liepin:'猎聘', zhilian:'智联招聘', nowcoder:'牛客', manual:'用户提供' };
 const stateNames = { met:'已命中', partial:'部分命中', missing:'简历未体现' };
 const reportBox = document.querySelector('#match-report');
 const jobsBox = document.querySelector('#job-list');
@@ -23,16 +24,33 @@ const collectionStatus = document.querySelector('#collection-status');
 let resume = null;
 let jobs = [];
 let matching = false;
+let matchInterviewJob = null;
 let rubric;
+let ranked = [];
+let visibleJobs = 20;
+let rankingVersion = 0;
+const rankingStatus = document.querySelector('#ranking-status');
+const moreJobs = document.querySelector('#more-jobs');
 function message(target, text, error = false) {
   target.replaceChildren(el('div', text, `source-state${error ? ' error' : ''}`));
 }
 function renderJobs() {
   jobsBox.replaceChildren();
-  jobs.forEach(job => {
+  const ordered = ranked.length ? ranked.map(item => item.job) : jobs;
+  ordered.slice(0, visibleJobs).forEach(job => {
     const card = el('article', undefined, 'job-card');
     card.append(el('h3', job.title), el('div', [job.company, job.city].filter(Boolean).join(' · ') || sourceNames[job.source], 'job-meta'),
       el('div', job.salary || '薪资未公开', 'salary'));
+    card.append(el('p', [job.education, job.experience].filter(Boolean).join(' · '), 'job-meta'));
+    if (job.recruitment_type) card.append(el('span', job.recruitment_type, 'state-tag'));
+    if (job.published_at) card.append(el('p', `原站时间：${job.published_at}`, 'job-meta'));
+    const ranking = ranked.find(item => item.job.source === job.source && item.job.url === job.url && item.job.raw_text === job.raw_text);
+    if (ranking) {
+      const count = ranking.matched_skills.length + ranking.missing_skills.length;
+      card.append(el('div', ranking.score === null ? '未识别到技术技能关键词' : `技能关键词覆盖 ${ranking.score.toFixed(0)}% · ${ranking.matched_skills.length}/${count}`, 'skill-rank'));
+      if (ranking.matched_skills.length) card.append(el('p', `已命中：${ranking.matched_skills.join('、')}`, 'matched-keywords'));
+      if (ranking.missing_skills.length) card.append(el('p', `简历技能列表未体现：${ranking.missing_skills.join('、')}`, 'job-meta'));
+    }
     const details = el('details');
     details.append(el('summary', '查看完整岗位描述'), el('p', job.raw_text, 'jd-text'));
     const actions = el('div', undefined, 'job-actions');
@@ -53,7 +71,36 @@ function renderJobs() {
     card.append(details, actions);
     jobsBox.append(card);
   });
+  moreJobs.hidden = ordered.length <= visibleJobs;
+  moreJobs.textContent = `显示更多岗位（已显示 ${Math.min(visibleJobs, ordered.length)} / ${ordered.length}）`;
 }
+moreJobs.addEventListener('click', () => { visibleJobs += 20; renderJobs(); });
+async function rankJobs() {
+  const version = ++rankingVersion;
+  ranked = []; visibleJobs = 20; renderJobs();
+  if (!jobs.length) { rankingStatus.textContent = ''; return; }
+  if (!resume) { rankingStatus.textContent = `共 ${jobs.length} 个岗位；解析简历后可按技能排序。`; return; }
+  rankingStatus.textContent = '正在按简历技能为全部岗位排序…';
+  try {
+    const result = await api('/jobs/rank', {resume, jobs});
+    if (version !== rankingVersion) return;
+    ranked = result;
+    rankingStatus.textContent = `共 ${jobs.length} 个岗位，已按技能关键词覆盖率排序。支持技能别名；此排序不等于详细匹配评分，也不代表硬性条件均满足。`;
+    renderJobs();
+  } catch (error) {
+    if (version === rankingVersion) rankingStatus.textContent = `技能排序失败：${error.message}`;
+  }
+}
+function syncReportInterviewButtons() {
+  document.querySelectorAll('#match-panel .report-interview-button').forEach(button => {
+    button.disabled = !resume || !matchInterviewJob || interviewOccupied;
+    button.title = !resume ? '请先解析简历' : !matchInterviewJob ? '请先选择岗位生成匹配报告'
+      : interviewOccupied ? '已有面试正在进行，请先完成或结束当前面试' : `针对 ${matchInterviewJob.title} 开始模拟面试`;
+  });
+}
+document.querySelectorAll('#match-panel .report-interview-button').forEach(button => {
+  button.addEventListener('click', () => startInterview({resume, job:matchInterviewJob}));
+});
 function renderReport(report, job) {
   reportBox.replaceChildren();
   const header = el('div', undefined, 'score-header');
@@ -92,9 +139,11 @@ function renderReport(report, job) {
 }
 async function matchJob(job) {
   matching = true;
+  matchInterviewJob = job;
+  syncReportInterviewButtons();
   renderJobs();
   message(reportBox, `正在对照 ${job.title} 的要求，生成匹配报告…`);
-  document.querySelector('#match-panel').scrollIntoView({ behavior:'smooth', block:'start' });
+  window.dispatchEvent(new CustomEvent('module-navigate', {detail:'match-module'}));
   try {
     const report = await api('/matches', { resume, job });
     renderReport(report, job);
@@ -105,29 +154,61 @@ async function matchJob(job) {
     renderJobs();
   }
 }
-window.addEventListener('resume-parsed', event => { resume = event.detail; renderJobs(); });
-window.addEventListener('interview-changed', renderJobs);
+window.addEventListener('resume-parsed', event => {
+  resume = event.detail;
+  rankJobs();
+  syncReportInterviewButtons();
+});
+window.addEventListener('interview-changed', () => {
+  renderJobs();
+  syncReportInterviewButtons();
+});
 window.addEventListener('resume-cleared', () => {
   resume = null;
-  renderJobs();
+  matchInterviewJob = null;
+  syncReportInterviewButtons();
+  rankJobs();
   message(reportBox, '请先完成简历解析，再选择岗位生成匹配报告。');
+});
+document.querySelector('#job-source').addEventListener('change', event => {
+  document.querySelector('#recruitment-type-field').hidden = event.target.value !== 'nowcoder';
 });
 document.querySelector('#job-search').addEventListener('submit', async event => {
   event.preventDefault();
-  const controls = [...event.target.querySelectorAll('select,button')];
+  const controls = [...event.target.querySelectorAll('select,button,input')];
   const request = { role:document.querySelector('#job-role').value,
-    city:document.querySelector('#job-city').value, source:document.querySelector('#job-source').value };
+    city:document.querySelector('#job-city').value, source:document.querySelector('#job-source').value,
+    limit:Number(document.querySelector('#job-limit').value),
+    recruitment_type:document.querySelector('#recruitment-type').value };
   controls.forEach(control => { control.disabled = true; });
   jobs = jobs.filter(job => job.source === 'manual');
-  renderJobs();
-  message(collectionStatus, '正在读取所选平台的公开岗位信息…');
+  rankJobs();
+  message(collectionStatus, '正在分页读取公开岗位和完整详情，数量较多时请稍候…');
   try {
     const data = await api('/jobs/collect', request);
     collectionStatus.replaceChildren();
-    data.sources.forEach(source => collectionStatus.append(el('div',
-      `${sourceNames[source.source]}：${source.message}`, `source-state${source.status === 'success' ? '' : ' error'}`)));
+    data.sources.forEach(source => {
+      const state = el('div', undefined, `source-state${source.status === 'success' ? '' : ' error'}`);
+      state.append(el('p', `${sourceNames[source.source]}：${source.message}`));
+      const actions = el('div', undefined, 'job-actions');
+      Object.entries(source.search_urls).forEach(([name,url]) => {
+        const link = el('a', `打开${name}查看 / 登录 ↗`);
+        link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        actions.append(link);
+      });
+      const paste = el('button', '粘贴岗位 JD 进行分析', 'action secondary');
+      paste.type = 'button';
+      paste.addEventListener('click', () => {
+        document.querySelector('#manual-tab').click();
+        document.querySelector('[name="job-format"][value="text"]').click();
+        document.querySelector('#job-upload-text').focus();
+      });
+      actions.append(paste); state.append(actions);
+      if (source.status === 'blocked') state.append(el('p', '请在原站自行登录或完成验证。浏览器登录不会自动恢复服务器采集；可复制岗位正文，回到此处粘贴分析。', 'job-meta'));
+      collectionStatus.append(state);
+    });
     jobs = [...jobs, ...data.jobs];
-    renderJobs();
+    await rankJobs();
     if (!jobs.length) collectionStatus.append(el('p', '本次未获取到完整 JD。', 'none'));
   } catch (error) {
     message(collectionStatus, error instanceof TypeError ? '无法连接采集服务。' : error.message, true);
@@ -165,7 +246,7 @@ document.querySelector('#job-upload-form').addEventListener('submit', async even
     const job = await response.json();
     if (!response.ok) throw new Error(Array.isArray(job.detail) ? job.detail.map(item => item.msg).join('；') : job.detail);
     jobs.unshift(job);
-    renderJobs();
+    await rankJobs();
     message(status, resume ? '招聘信息已添加，点击下方“生成匹配报告”开始分析。' : '招聘信息已添加，请先上传并解析简历，再生成匹配报告。');
   } catch (error) {
     message(status, error instanceof TypeError ? '无法连接上传服务，请检查后端是否启动。' : error.message, true);
@@ -174,11 +255,5 @@ document.querySelector('#job-upload-form').addEventListener('submit', async even
 try {
   const [options, rules] = await Promise.all([api('/jobs/options'), api('/matching/rubric')]);
   rubric = rules;
-  [['#job-role', options.roles], ['#job-city', options.cities]].forEach(([selector, items]) => {
-    items.forEach(item => {
-      const option = el('option', item.label);
-      option.value = item.id;
-      document.querySelector(selector).append(option);
-    });
-  });
+  mountJobSelectors(options);
 } catch (error) { message(collectionStatus, `无法加载职位选项：${error.message}`, true); }

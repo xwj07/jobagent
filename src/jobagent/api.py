@@ -2,8 +2,10 @@
 
 import io
 import json
+import logging
 import wave
 from pathlib import Path
+from time import perf_counter
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, UploadFile
@@ -16,7 +18,7 @@ from pypdf.errors import PdfReadError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .collectors import CITIES, ROLES, collect_jobs
+from .collectors import collect_jobs
 from .config import Settings
 from .db import get_session_factory, init_db
 from .evaluation import annotate_case, evaluation_summary, human_score, save_case
@@ -29,6 +31,7 @@ from .interview import (
     start_interview,
 )
 from .interview_schemas import AnswerInput, StartInterview
+from .job_catalog import CITY_OPTIONS, ROLE_OPTIONS
 from .job_input import manual_job, read_job_file
 from .match_schemas import (
     CollectionRequest,
@@ -37,11 +40,15 @@ from .match_schemas import (
     JobCandidate,
     MatchReport,
     MatchRequest,
+    RankedJob,
+    RankRequest,
 )
 from .matching import RUBRIC, RUBRIC_VERSION, MatchProvider, get_match_provider
 from .models import InterviewSession, MatchCase
+from .ranking import rank_jobs
 from .resume import OpenAIResumeProvider, extract_pdf_text, get_resume_provider
 from .schemas import ResumeExtraction
+from .uploads import MAX_AUDIO_BYTES, MAX_PDF_BYTES, UploadTooLarge, read_limited
 
 app = FastAPI(title="Jobagent", docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
@@ -126,7 +133,10 @@ def interview_audio(
     record = required_interview(session, interview_id)
     if record.state["status"] != "active":
         raise HTTPException(status_code=409, detail="面试已结束，请开始新的面试。")
-    audio = file.file.read()
+    try:
+        audio = read_limited(file.file, MAX_AUDIO_BYTES, "录音文件")
+    except UploadTooLarge as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
     try:
         with wave.open(io.BytesIO(audio)) as recording:
             if recording.getnframes() == 0:
@@ -150,14 +160,24 @@ def interview_audio(
 @app.get("/jobs/options")
 def job_options() -> dict:
     return {
-        "roles": [{"id": key, "label": value[0]} for key, value in ROLES.items()],
-        "cities": [{"id": key, "label": value[0]} for key, value in CITIES.items()],
+        "roles": [
+            {key: item[key] for key in ("id", "label", "group", "keyword")} for item in ROLE_OPTIONS
+        ],
+        "cities": [
+            {key: item[key] for key in ("id", "label", "group", "pinyin", "hot")}
+            for item in CITY_OPTIONS
+        ],
     }
 
 
 @app.post("/jobs/collect", response_model=CollectionResult)
 def collect(request: CollectionRequest) -> CollectionResult:
     return collect_jobs(request)
+
+
+@app.post("/jobs/rank", response_model=list[RankedJob])
+def rank_collected_jobs(request: RankRequest) -> list[RankedJob]:
+    return rank_jobs(request)
 
 
 @app.post("/jobs/upload", response_model=JobCandidate)
@@ -172,6 +192,8 @@ def upload_job(
         if file is not None:
             text = read_job_file(file.file, file.filename or "")
         return manual_job(text, title)
+    except UploadTooLarge as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -327,8 +349,18 @@ def parse_resume(
     file: UploadFile,
     provider: Annotated[OpenAIResumeProvider, Depends(get_resume_provider)],
 ) -> ResumeExtraction:
+    started = perf_counter()
     try:
-        text = extract_pdf_text(file.file)
+        data = read_limited(file.file, MAX_PDF_BYTES, "简历 PDF")
+        text = extract_pdf_text(io.BytesIO(data))
+        logging.getLogger("uvicorn.error").info(
+            "resume_pdf_extracted elapsed_seconds=%.3f bytes=%d text_chars=%d",
+            perf_counter() - started,
+            len(data),
+            len(text),
+        )
+    except UploadTooLarge as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
     except PdfReadError as exc:
         raise HTTPException(
             status_code=422, detail="无法读取 PDF，文件可能已损坏、已加密或并非有效的 PDF。"

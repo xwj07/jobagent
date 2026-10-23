@@ -97,7 +97,7 @@ export async function startInterview(input) {
   if (interviewOccupied) return;
   setPending(true);
   announce('正在根据简历与岗位制定问题计划…');
-  document.querySelector('#interview-panel').scrollIntoView({behavior:'smooth', block:'start'});
+  window.dispatchEvent(new CustomEvent('module-navigate', {detail:'interview-module'}));
   try {
     current = await request('/interviews', input);
     localStorage.setItem('jobagent-interview', current.id);

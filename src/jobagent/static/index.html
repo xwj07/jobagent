@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Jobagent · 简历解析</title>
-  <link rel="stylesheet" href="/static/workspace.css?v=resume-edit-v1">
+  <title>Jobagent · 你的求职工作台</title>
+  <link rel="stylesheet" href="/static/workspace.css?v=report-interview-v2">
   <style>
     :root { color-scheme: light; --ink:#182e2a; --muted:#71807a; --green:#176d54; --line:#e1e7e1; }
     * { box-sizing:border-box; }
@@ -69,6 +69,7 @@
     [hidden] { display:none !important; }
     @media(max-width:760px) { main { padding:30px 18px; } .nav { padding:17px 20px; } h1 { font-size:28px; } .workspace { grid-template-columns:1fr; } .result-panel { min-height:300px; } .empty { padding:50px 20px; } }
   </style>
+  <link rel="stylesheet" href="/static/module-layout.css?v=modules-v3">
 </head>
 <body>
   <header><div class="nav"><div class="mark" aria-hidden="true">J</div><span class="brand">jobagent</span><a class="nav-label" href="/evaluation">人工标注与评估 ↗</a></div></header>
@@ -93,7 +94,7 @@
         </form>
       </section>
       <section class="panel result-panel" aria-label="解析结果">
-        <div class="panel-head"><span class="step">02</span><h2>解析结果</h2><span class="badge" id="result-badge">等待上传</span><button type="button" class="action secondary" id="edit-resume" hidden>编辑 / 补充</button></div>
+        <div class="panel-head"><h2>解析结果</h2><span class="badge" id="result-badge">等待上传</span><button type="button" class="action secondary" id="edit-resume" hidden>编辑 / 补充</button></div>
         <div class="empty" id="empty"><div class="empty-icon" aria-hidden="true">▤</div><strong>你的经历，即将在这里展开</strong><p>解析完成后，以清晰的卡片展示简历内容。</p></div>
         <div id="result" hidden></div>
         <form id="resume-editor" hidden>
@@ -108,19 +109,29 @@
       </section>
     </div>
     <section class="panel workflow">
-      <div class="panel-head"><span class="step">03</span><h2>获取或上传招聘信息</h2></div>
+      <div class="panel-head"><span class="step">02</span><h2>获取或上传招聘信息</h2></div>
       <div class="job-input-tabs" role="tablist" aria-label="招聘信息来源">
         <button type="button" role="tab" aria-selected="true" aria-controls="online-jobs" id="online-tab">在线获取</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="manual-jobs" id="manual-tab">自行提供</button>
       </div>
       <div id="online-jobs" role="tabpanel" aria-labelledby="online-tab">
       <form id="job-search" class="search-form">
-        <label>目标职位<select id="job-role" required aria-label="目标职位"></select></label>
-        <label>工作城市<select id="job-city" required aria-label="工作城市"></select></label>
-        <label>招聘平台<select id="job-source" aria-label="招聘平台"><option value="both">BOSS 直聘 + 智联招聘</option><option value="zhilian">智联招聘</option><option value="boss">BOSS 直聘</option></select></label>
+        <label class="catalog-select">目标职位
+          <input type="search" id="job-role-search" aria-label="搜索职位选项" placeholder="搜索职位或职能，例如：会计、运营、Java" autocomplete="off">
+          <select id="job-role" required aria-label="目标职位"></select>
+          <span id="job-role-count" class="catalog-count" aria-live="polite"></span>
+        </label>
+        <label class="catalog-select">工作城市
+          <input type="search" id="job-city-search" aria-label="搜索城市选项" placeholder="搜索城市或拼音，例如：苏州、nanjing" autocomplete="off">
+          <select id="job-city" required aria-label="工作城市"></select>
+          <span id="job-city-count" class="catalog-count" aria-live="polite"></span>
+        </label>
+        <label>招聘平台<select id="job-source" aria-label="招聘平台"><option value="nowcoder">牛客</option><option value="zhilian">智联招聘</option><option value="liepin">猎聘</option><option value="both">猎聘 + 智联招聘</option></select></label>
+        <label id="recruitment-type-field">牛客岗位类型<select id="recruitment-type" aria-label="牛客岗位类型"><option value="all">校招 + 实习 + 社招</option><option value="campus">校招</option><option value="intern">实习</option><option value="social">社招</option></select></label>
+        <label>每个平台采集上限<select id="job-limit" aria-label="每个平台采集上限"><option value="20">20 个</option><option value="50" selected>50 个</option><option value="100">100 个</option></select></label>
         <button type="submit" class="action" id="collect-button">获取岗位 ↗</button>
       </form>
-      <p class="workflow-note">每个平台读取首批最多 5 个完整 JD。请先完成简历解析，再选择岗位生成匹配报告。</p>
+      <p class="workflow-note">分页读取完整岗位描述，去重后显示实际数量。解析简历后按技能关键词覆盖率排序；硬性条件、加分项和实际经历以详细匹配报告为准。</p>
       <div id="collection-status" class="workflow-content" aria-live="polite"></div>
       </div>
       <div id="manual-jobs" role="tabpanel" aria-labelledby="manual-tab" hidden>
@@ -137,14 +148,17 @@
           <div id="job-upload-status" role="status" aria-live="polite"></div>
         </form>
       </div>
+      <div class="workflow-content"><p id="ranking-status" role="status" aria-live="polite" class="job-meta"></p></div>
       <div id="job-list" class="job-grid workflow-content"></div>
+      <div class="workflow-content"><button type="button" id="more-jobs" class="action secondary" hidden>显示更多岗位</button></div>
     </section>
     <section class="panel workflow" id="match-panel">
-      <div class="panel-head"><span class="step">04</span><h2>岗位匹配报告</h2></div>
+      <div class="panel-head"><span class="step">03</span><h2>岗位匹配报告</h2><button type="button" class="action report-interview-button report-interview-top" disabled title="请先解析简历并选择岗位">开始模拟面试 ↗</button></div>
       <div class="workflow-content" id="match-report"><p class="none">选择一个岗位，查看要求命中、技能差距与补足建议。</p></div>
+      <div class="workflow-content report-interview-actions"><button type="button" class="action report-interview-button" disabled title="请先解析简历并选择岗位">开始模拟面试 ↗</button></div>
     </section>
     <section class="panel workflow" id="interview-panel">
-      <div class="panel-head"><span class="step">05</span><h2>模拟面试</h2></div>
+      <div class="panel-head"><span class="step">04</span><h2>模拟面试</h2></div>
       <div class="workflow-content">
         <p class="workflow-note">三个主题，每个主题最多追问一次。根据回答调整难度，结束后查看评分与练习建议。</p>
         <div id="interview-status" role="status" aria-live="polite">解析简历后，点击岗位卡片上的“开始模拟面试”。</div>
@@ -304,6 +318,7 @@
       }
     });
   </script>
-  <script type="module" src="/static/workspace.js?v=resume-edit-v1"></script>
+  <script type="module" src="/static/module-layout.js?v=modules-v3"></script>
+  <script type="module" src="/static/workspace.js?v=report-interview-v2"></script>
 </body>
 </html>
